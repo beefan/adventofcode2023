@@ -47,9 +47,19 @@ class Bag
     $this->counts[$color] -= $count;
   }
 
+  public function replaceCubes(string $color, int $count)
+  {
+    if ($this->counts[$color] < $count) $this->counts[$color] = $count;
+  }
+
   public function isValidBag()
   {
     return count(array_filter($this->counts, fn ($i) => $i < 0)) === 0;
+  }
+
+  public function power()
+  {
+    return $this->counts['red'] * $this->counts['blue'] * $this->counts['green'];
   }
 }
 
@@ -106,6 +116,18 @@ class Game
 
     return true;
   }
+
+  public function playMin(): Bag
+  {
+    $this->bag = new Bag(0, 0, 0);
+    foreach ($this->steps as $step) {
+      foreach ($step as $subStep) {
+        $this->bag->replaceCubes($subStep['color'], $subStep['count']);
+      }
+    }
+
+    return $this->bag;
+  }
 }
 
 function advent()
@@ -122,6 +144,14 @@ function advent()
 
 function adventPart2()
 {
+  $file = explode(PHP_EOL, file_get_contents('dec2.input'));
+  $powers = [];
+  foreach ($file as $line) {
+    $game = new Game($line);
+    $powers[] = $game->playMin()->power();
+  }
+
+  var_dump(array_reduce($powers, fn ($acc, $id) => $acc + $id));
 }
 
 adventPart2();
