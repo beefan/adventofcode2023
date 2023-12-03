@@ -71,6 +71,16 @@ class Schematic
     return $partNumbers;
   }
 
+  public function gearRatios(): array
+  {
+    $symbols = array_filter($this->inputs, fn (Input $item) => get_class($item) === Symbol::class);
+    $numbers = array_filter($this->inputs, fn (Input $item) => get_class($item) === Number::class);
+
+    return array_filter(
+      array_map(fn (Symbol $symbol) => $symbol->gearRatio($numbers), $symbols)
+    );
+  }
+
   private function getCharType(string $char): string
   {
     $type = 'symbol';
@@ -111,6 +121,14 @@ class Coordinate
     $this->x = $x;
     $this->y = $y;
   }
+
+  public function toArray(): array
+  {
+    return [
+      'x' => $this->x,
+      'y' => $this->y,
+    ];
+  }
 }
 
 class Input
@@ -122,34 +140,8 @@ class Input
   {
     $this->coordinates = $coordinates;
   }
-}
 
-class Spacer extends Input
-{
-}
-
-class Number extends Input
-{
-  public function isAdjacentToSymbol(array $symbols): bool
-  {
-    $symbolCoordinates = array_values(array_map(
-      fn (Symbol $symbol) => $symbol->coordinates,
-      $symbols
-    ));
-    $symbolCoordinates = array_map(
-      fn (array $coordinate) => ['x' => $coordinate[0]->x, 'y' => $coordinate[0]->y],
-      $symbolCoordinates
-    );
-
-    foreach ($this->adjacentCoordinates() as $adjacentCoordinate) {
-      if (in_array($adjacentCoordinate, $symbolCoordinates)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private function adjacentCoordinates(): array
+  public function adjacentCoordinates(): array
   {
     $result = [];
     foreach ($this->coordinates as $coordinate) {
@@ -167,13 +159,63 @@ class Number extends Input
         ['x' => $x - 1, 'y' => $y - 1],
       ];
     }
-
     return $result;
+  }
+
+  public function resolveCoordinates(array $inputs): array
+  {
+    $inputCoordinates = array_map(
+      fn (Input $input) => $input->coordinates,
+      $inputs
+    );
+    return array_map(
+      fn (array $coordinate) => $coordinate[0]->toArray(),
+      $inputCoordinates
+    );
+  }
+}
+
+class Spacer extends Input
+{
+}
+
+class Number extends Input
+{
+  public function isAdjacentToSymbol(array $symbols): bool
+  {
+    $symbolCoordinates = $this->resolveCoordinates($symbols);
+
+    foreach ($this->adjacentCoordinates() as $adjacentCoordinate) {
+      if (in_array($adjacentCoordinate, $symbolCoordinates)) {
+        return true;
+      }
+    }
+    return false;
   }
 }
 
 class Symbol extends Input
 {
+  public function gearRatio(array $numbers): int
+  {
+    if ($this->value !== '*') return 0;
+
+    $matches = [];
+    foreach ($numbers as $number) {
+      $numberCoordinates = array_map(fn (Coordinate $point) => $point->toArray(), $number->coordinates);
+
+      foreach ($this->adjacentCoordinates() as $adjacentCoordinate) {
+        if (in_array($adjacentCoordinate, $numberCoordinates)) {
+          $matches[] = (int) $number->value;
+          break;
+        }
+      }
+    }
+
+    if (count($matches) < 2) return 0;
+
+    return array_reduce($matches, fn ($acc, $item) => $acc * $item, 1);
+  }
 }
 
 function advent()
@@ -197,5 +239,27 @@ function advent()
   var_dump(array_reduce($partNumbers, fn ($acc, $n) => $acc + $n));
 }
 
-advent();
+function advent2()
+{
+  $input = file_get_contents('dec3.input');
+  //   $input =
+  //     "467..114..
+  // ...*......
+  // ..35..633.
+  // ......#...
+  // 617*......
+  // .....+.58.
+  // ..592.....
+  // ......755.
+  // ...$.*....
+  // .664.598..";
+
+
+  $schematic = new Schematic($input);
+  $gearRatios = $schematic->gearRatios();
+
+  var_dump(array_reduce($gearRatios, fn ($acc, $n) => $acc + $n));
+}
+
+advent2();
 ?>
