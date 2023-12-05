@@ -41,13 +41,13 @@ class Card
   public function __construct(string $line)
   {
     $once = explode(':', $line);
+    $twice = explode(' ', $once[0]);
 
-    $this->id = (int) explode(' ', $once[0])[1];
+    $this->id = (int) $twice[count($twice) - 1];
 
-    $twice = explode(' | ', $once[1]);
-
-    $this->winningNumbers = array_filter(explode(' ', trim($twice[0])));
-    $this->pickNumbers = array_filter(explode(' ', $twice[1]));
+    $thrice = explode(' | ', $once[1]);
+    $this->winningNumbers = array_filter(explode(' ', trim($thrice[0])));
+    $this->pickNumbers = array_filter(explode(' ', $thrice[1]));
   }
 
   public function points(): int
@@ -55,6 +55,16 @@ class Card
     $matchCount = count($this->winners());
 
     return $matchCount > 0 ? pow(2, $matchCount - 1) : 0;
+  }
+
+  public function wonCopies(): array
+  {
+    $ids = [];
+    foreach (array_keys($this->winners()) as $index => $val) {
+      $ids[] = $this->id + $index + 1;
+    }
+
+    return $ids;
   }
 
   private function winners(): array
@@ -95,5 +105,42 @@ function advent()
   var_dump($total);
 }
 
-advent();
+function advent2()
+{
+  $input = file_get_contents('dec4.input');
+  // $input = <<<TEXT
+  // Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53
+  // Card 2: 13 32 20 16 61 | 61 30 68 82 17 32 24 19
+  // Card 3:  1 21 53 59 44 | 69 82 63 72 16 21 14  1
+  // Card 4: 41 92 73 84 69 | 59 84 76 51 58  5 54 83
+  // Card 5: 87 83 26 28 32 | 88 30 70 12 93 22 82 36
+  // Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11
+  // TEXT;
+
+  $counts = [];
+  $cardWinnerMap = [];
+  $cards = [];
+  foreach (explode(PHP_EOL, $input) as $line) {
+    $card = new Card($line);
+
+    $counts[$card->id] = 1;
+
+    $won = $card->wonCopies();
+    $cardWinnerMap[$card->id] = $won;
+    $cards = array_merge($cards, $won);
+  }
+
+  while (!empty($cards)) {
+    foreach ($cards as $card) {
+      $counts[$card] += 1;
+    }
+
+    $temp = array_map(fn ($id) => $cardWinnerMap[$id], $cards);
+    $cards = array_merge(...$temp);
+  }
+
+  var_dump(array_sum($counts));
+}
+
+advent2();
 ?>
