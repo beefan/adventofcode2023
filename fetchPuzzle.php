@@ -15,7 +15,10 @@ function fetchPuzzle()
 <?php
   function advent() {
     $input = file_get_contents(\'' . $puzzleInputFilePath . '\');
-    echo $input;
+
+    foreach (explode(PHP_EOL, $input) as $line) {
+      echo $line;
+    }
   }
 
   advent();
