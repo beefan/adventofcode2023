@@ -98,6 +98,15 @@ class History
     });
   }
 
+  public function backwardsValue()
+  {
+    $reversed = array_reverse($this->map);
+
+    return array_reduce($reversed, function ($acc, array $history) {
+      return $history[0] - $acc;
+    });
+  }
+
   private function getNextIteration($iteration): array
   {
     $new = [];
@@ -126,5 +135,21 @@ function advent()
   var_dump($sum);
 }
 
-advent();
+function advent2()
+{
+  $input = file_get_contents('dec9.input');
+  // $input = <<<TEXT
+  //     0 3 6 9 12 15
+  //     1 3 6 10 15 21
+  //     10 13 16 21 30 45
+  //     TEXT;
+
+  $sensor = new Sensor($input);
+
+  $sum = array_reduce($sensor->histories, fn ($acc, History $history) => $acc + $history->backwardsValue());
+
+  var_dump($sum);
+}
+
+advent2();
 ?>
