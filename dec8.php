@@ -47,6 +47,11 @@ class Instructions
 
     return $dir;
   }
+
+  public function zero()
+  {
+    $this->index = 0;
+  }
 }
 
 class Element
@@ -94,6 +99,54 @@ function advent()
   var_dump($steps);
 }
 
+function advent2()
+{
+  $input = file_get_contents('dec8.input');
+  // $input = <<<TEXT
+  //   LR
+
+  //   11A = (11B, XXX)
+  //   11B = (XXX, 11Z)
+  //   11Z = (11B, XXX)
+  //   22A = (22B, XXX)
+  //   22B = (22C, 22C)
+  //   22C = (22Z, 22Z)
+  //   22Z = (22B, 22B)
+  //   XXX = (XXX, XXX)
+  //   TEXT;
+
+  [$instructions, $map] = explode(PHP_EOL . PHP_EOL, $input);
+
+  $instructions = new Instructions($instructions);
+  $elements = array_map(fn ($element) => new Element($element), explode(PHP_EOL, $map));
+
+  $steps = [];
+  $currentElements = findElements($elements, 'A');
+  foreach ($currentElements as $element) {
+    $step = 0;
+    while (!str_ends_with($element->node, 'Z')) {
+      $step++;
+      $dir = $instructions->next();
+      $node = $dir === 'R' ? $element->right : $element->left;
+
+      $element = findElement($elements, $node);
+    }
+    $steps[] = $step;
+    $instructions->zero();
+  }
+
+  return lcm($steps);
+}
+
+function lcm($elements)
+{
+  $lcm = array_reduce(array_slice($elements, 1), function ($acc, int $element) {
+    return ($acc * $element) / (int) gmp_gcd($acc, $element);
+  }, $elements[0]);
+
+  return $lcm;
+}
+
 function findElement($haystack, $needle)
 {
   foreach ($haystack as $element) {
@@ -103,5 +156,17 @@ function findElement($haystack, $needle)
   }
 }
 
-advent();
+function findElements($haystack, $needle)
+{
+  $elements = [];
+  foreach ($haystack as $element) {
+    if (str_ends_with($element->node, $needle)) {
+      $elements[] = $element;
+    }
+  }
+
+  return $elements;
+}
+
+var_dump(advent2());
 ?>
