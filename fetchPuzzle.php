@@ -2,6 +2,7 @@
 
 function fetchPuzzle()
 {
+  date_default_timezone_set('EST');
   $day = date('j');
 
   $puzzleFilePath = 'dec' . $day . '.php';
@@ -15,7 +16,8 @@ function fetchPuzzle()
 <?php
   function advent() {
     $input = file_get_contents(\'' . $puzzleInputFilePath . '\');
-
+    $input = <<<TEXT
+      TEXT;
     foreach (explode(PHP_EOL, $input) as $line) {
       echo $line;
     }
