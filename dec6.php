@@ -40,14 +40,19 @@ Distance:  9  40  200
 class RaceRecord
 {
   public array $record;
-  public function __construct($raw)
+  public function __construct($raw, $forPartTwo = false)
   {
     $once = explode(PHP_EOL, $raw);
     $cleanedDistance = trim(explode('Distance: ', $once[1])[1]);
     $cleanedTime = trim(explode('Time: ', $once[0])[1]);
-    var_dump($cleanedTime, $cleanedDistance);
-    $distances = array_filter(preg_split('/\s/', $cleanedDistance));
-    $times = array_filter(preg_split('/\s/', $cleanedTime));
+
+    if ($forPartTwo) {
+      $distances = [preg_replace('/\s/', '', $cleanedDistance)];
+      $times = [preg_replace('/\s/', '', $cleanedTime)];
+    } else {
+      $distances = array_filter(preg_split('/\s/', $cleanedDistance));
+      $times = array_filter(preg_split('/\s/', $cleanedTime));
+    }
 
     $this->record = array_combine($distances, $times);
   }
@@ -68,8 +73,6 @@ class Boat
   private function race(int $time)
   {
     $distance = $this->speed * $time;
-    // var_dump("distance: " . $distance, "time: " . $time, "speed: " . $this->speed);
-    // echo "***\n";
     $this->speed = 0;
     return $distance;
   }
@@ -81,31 +84,36 @@ class Boat
       $raceTime = $time - $chargeTime;
       $this->charge($chargeTime);
       if ($this->race($raceTime) > $distance) {
-        // var_dump('charge: ' . $chargeTime, 'race: ' . $raceTime, 'dist: ' . $distance);
-        // echo "..\n";
         $count++;
       }
     }
 
     return $count;
   }
+
+  public function waysToWinCount2(int $distance, int $time): int
+  {
+    $root1 = (-$time - sqrt(pow($time, 2) - 4 * $distance)) / 2;
+    $root2 = (-$time + sqrt(pow($time, 2) - 4 * $distance)) / 2;
+    var_dump(abs($root2 - $root1));
+    return floor(abs($root2 - $root1));
+  }
 }
 
 function advent()
 {
   $input = file_get_contents('dec6.input');
+  // $input = <<<TEXT
+  //   Time:      7  15   30
+  //   Distance:  9  40  200
+  //   TEXT;
 
-  $input = <<<TEXT
-    Time:      7  15   30
-    Distance:  9  40  200
-    TEXT;
-
-  $raceRecord = new RaceRecord($input);
+  $raceRecord = new RaceRecord($input, true);
   $boat = new Boat();
 
   $wins = [];
   foreach ($raceRecord->record as $distance => $time) {
-    $wins[] = $boat->waysToWinCount($distance, $time);
+    $wins[] = $boat->waysToWinCount2($distance, $time);
   }
 
   $margin = array_reduce($wins, fn ($acc, $win) => $acc * $win, 1);
