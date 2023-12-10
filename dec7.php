@@ -56,7 +56,7 @@ class Hand
     $once = explode(' ', $line);
     $this->cards = str_split($once[0]);
     $this->bid = (int) $once[1];
-    $this->score = (new Scorer)->score($this);
+    $this->score = (new Scorer)->score2($this);
   }
 
   public function setHighCard(string $high)
@@ -88,6 +88,21 @@ class Scorer
     '9' => 9,
     'T' => 10,
     'J' => 11,
+    'Q' => 12,
+    'K' => 13,
+    'A' => 14,
+  ];
+  public array $part2Values = [
+    'J' => 1,
+    '2' => 2,
+    '3' => 3,
+    '4' => 4,
+    '5' => 5,
+    '6' => 6,
+    '7' => 7,
+    '8' => 8,
+    '9' => 9,
+    'T' => 10,
     'Q' => 12,
     'K' => 13,
     'A' => 14,
@@ -124,6 +139,39 @@ class Scorer
     return 7;
   }
 
+  public function score2(Hand $hand)
+  {
+    $jokers = array_filter($hand->cards, fn ($card) => $card == 'J');
+    $serious = array_filter($hand->cards, fn ($card) => $card != 'J');
+
+    $unique = array_values(array_unique($serious));
+    $uniqueCount = count($unique);
+    $jokersCount = count($jokers);
+    if ($uniqueCount <= 1) return 1;
+    if ($uniqueCount === 2) {
+      $one = array_filter($hand->cards, fn ($card) => $card === $unique[0]);
+      $two = array_filter($hand->cards, fn ($card) => $card === $unique[1]);
+
+      if (count($one) + $jokersCount === 4 || count($two) + $jokersCount === 4) {
+        return 2;
+      }
+      return 3;
+    }
+    if ($uniqueCount === 3) {
+      $one = array_filter($hand->cards, fn ($card) => $card === $unique[0]);
+      $two = array_filter($hand->cards, fn ($card) => $card === $unique[1]);
+      $three = array_filter($hand->cards, fn ($card) => $card === $unique[2]);
+      $threeOfKind = (bool) count(array_filter([$one, $two, $three], fn ($arr) => count($arr) + $jokersCount === 3));
+
+      return $threeOfKind ? 4 : 5;
+    }
+    if ($uniqueCount === 4) {
+      return 6;
+    }
+
+    return 7;
+  }
+
   /** @param Hand[] $hands  */
   public function rank(array $hands)
   {
@@ -145,7 +193,7 @@ class Scorer
   {
     for ($i = 0; $i < 5; $i++) {
       if ($one->cards[$i] === $two->cards[$i]) continue;
-      return $this->cardValues[$one->cards[$i]] > $this->cardValues[$two->cards[$i]] ? -1 : 1;
+      return $this->part2Values[$one->cards[$i]] > $this->part2Values[$two->cards[$i]] ? -1 : 1;
     }
   }
 }
@@ -172,5 +220,20 @@ function advent()
   var_dump($sum);
 }
 
-advent();
+function advent2()
+{
+  $input = file_get_contents('dec7.input');
+
+  $hands = [];
+  foreach (explode(PHP_EOL, $input) as $line) {
+    $hand = new Hand($line);
+    $hands[] = $hand;
+  }
+  (new Scorer)->rank($hands);
+
+  $sum = array_reduce($hands, fn ($acc, Hand $hand) => $acc + $hand->winnings());
+  var_dump($sum);
+}
+
+advent2();
 ?>
