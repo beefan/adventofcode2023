@@ -105,7 +105,7 @@ class Universe
   public array $galaxyPairs;
   public array $galaxies;
 
-  public function __construct($input)
+  public static function forPartOne($input)
   {
     // clean input
     $once = explode(PHP_EOL, $input);
@@ -113,8 +113,25 @@ class Universe
       return str_split($line);
     }, $once);
 
-    $this->rows = $this->expand($rows);
-    $this->galaxyPairs = $this->findGalaxyPairs() ?? [];
+    $universe = new Universe();
+    $universe->expand($rows);
+    $universe->findGalaxyPairs();
+
+    return $universe;
+  }
+
+  public static function forPartTwo($input, $expansion = 2)
+  {
+    // clean input
+    $once = explode(PHP_EOL, $input);
+    $rows = array_map(function ($line) {
+      return str_split($line);
+    }, $once);
+
+    $universe = new Universe();
+    $universe->findGalaxyPairsV2($rows, $expansion);
+
+    return $universe;
   }
 
   public function getGalaxy($id): Galaxy
@@ -122,7 +139,36 @@ class Universe
     return array_values(array_filter($this->galaxies, fn ($galaxy) => $galaxy->id == $id))[0];
   }
 
-  private function findGalaxyPairs()
+  public function findGalaxyPairsV2($rows, $expansion)
+  {
+    $dupCols = $this->dupCols($rows);
+    $dupRows = $this->dupRows($rows);
+
+    $galaxies = [];
+    $id = 1;
+    for ($y = 0; $y < count($rows); $y++) {
+      for ($x = 0; $x < count($rows[$y]); $x++) {
+        if ($rows[$y][$x] == '#') {
+          $xFactor = 0;
+          foreach ($dupCols as $col) {
+            if ($col < $x) $xFactor += $expansion;
+          }
+
+          $yFactor = 0;
+          foreach ($dupRows as $row) {
+            if ($row < $y) $yFactor += $expansion;
+          }
+          $galaxies[] = new Galaxy($x + $xFactor, $y + $yFactor, $id);
+          $id++;
+        }
+      }
+    }
+    $this->galaxies = $galaxies;
+
+    $this->buildGalaxyPairs();
+  }
+
+  public function findGalaxyPairs()
   {
     $galaxies = [];
     $id = 1;
@@ -136,9 +182,14 @@ class Universe
     }
     $this->galaxies = $galaxies;
 
+    $this->buildGalaxyPairs();
+  }
+
+  private function buildGalaxyPairs()
+  {
     $pairs = [];
-    for ($i = 1; $i <= count($galaxies); $i++) {
-      foreach ($galaxies as $galaxy) {
+    for ($i = 1; $i <= count($this->galaxies); $i++) {
+      foreach ($this->galaxies as $galaxy) {
         if ($galaxy->id == $i) continue;
         if (in_array([$galaxy->id, $i], $pairs) || in_array([$i, $galaxy->id], $pairs)) continue;
 
@@ -146,12 +197,11 @@ class Universe
       }
     }
 
-    return $pairs;
+    $this->galaxyPairs = $pairs;
   }
 
-  private function expand(array $rows)
+  private function dupRows($rows)
   {
-    // find empty rows
     $dupRows = [];
     for ($i = 0; $i < count($rows); $i++) {
       $row = $rows[$i];
@@ -159,6 +209,31 @@ class Universe
         $dupRows[] = $i;
       }
     }
+    return $dupRows;
+  }
+
+  private function dupCols($rows)
+  {
+    $dupCols = [];
+    for ($i = 0; $i < count($rows[0]); $i++) {
+      $colVal = $rows[0][$i];
+      $dup = true;
+      foreach ($rows as $row) {
+        if ($colVal !== $row[$i]) {
+          $dup = false;
+          break;
+        }
+      }
+
+      if ($dup) $dupCols[] = $i;
+    }
+    return $dupCols;
+  }
+
+  public function expand(array $rows)
+  {
+    // find empty rows
+    $dupRows = $this->dupRows($rows);
 
     // insert duplicate rows
     $offset = 0;
@@ -179,19 +254,7 @@ class Universe
     }
 
     // find empty cols
-    $dupCols = [];
-    for ($i = 0; $i < count($rows[0]); $i++) {
-      $colVal = $rows[0][$i];
-      $dup = true;
-      foreach ($rows as $row) {
-        if ($colVal !== $row[$i]) {
-          $dup = false;
-          break;
-        }
-      }
-
-      if ($dup) $dupCols[] = $i;
-    }
+    $dupCols = $this->dupCols($rows);
 
     // insert duplicate columns
     $offset = 0;
@@ -213,7 +276,7 @@ class Universe
       }, $rows);
     }
 
-    return $rows;
+    $this->rows = $rows;
   }
 
   public function visualize()
@@ -243,7 +306,7 @@ function advent()
   //     #...#.....
   //     TEXT;
 
-  $universe = new Universe($input);
+  $universe = Universe::forPartOne($input);
   $universe->visualize();
 
   $shortestPaths = array_map(function ($pair) use ($universe) {
@@ -259,5 +322,36 @@ function advent()
   var_dump($shortestPath);
 }
 
-advent();
+function advent2()
+{
+  $input = file_get_contents('dec11.input');
+  // $input = <<<TEXT
+  //     ...#......
+  //     .......#..
+  //     #.........
+  //     ..........
+  //     ......#...
+  //     .#........
+  //     .........#
+  //     ..........
+  //     .......#..
+  //     #...#.....
+  //     TEXT;
+
+  $universe = Universe::forPartTwo($input, 999999);
+
+  $shortestPaths = array_map(function ($pair) use ($universe) {
+    [$galaxyId1, $galaxyId2] = $pair;
+    $g1 = $universe->getGalaxy($galaxyId1);
+    $g2 = $universe->getGalaxy($galaxyId2);
+
+    return $g1->distanceToGalaxy($g2);
+  }, $universe->galaxyPairs);
+
+  $shortestPath = array_reduce($shortestPaths, fn ($acc, $distance) => $acc + $distance);
+
+  var_dump($shortestPath);
+}
+
+advent2();
 ?>
